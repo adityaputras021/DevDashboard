@@ -98,8 +98,7 @@ export function ProfileEditor() {
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16 border-2 border-border">
             <AvatarImage src={avatarUrl ?? undefined} />
-            <AvatarFallback className="font-mono">{name.slice(0, 2).toUpperCase()}</AvatarFallback>
-          </Avatar>
+            <AvatarFallback className="font-mono">{(name || "??").slice(0, 2).toUpperCase()}</AvatarFallback>          </Avatar>
           <div>
             <Label htmlFor="avatar-upload" className="cursor-pointer">
               <Button variant="outline" size="sm" asChild disabled={uploading}>

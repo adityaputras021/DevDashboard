@@ -1,33 +1,10 @@
 import { useState } from "react";
-import {
-  useSocialLinks,
-  useCreateSocialLink,
-  useUpdateSocialLink,
-  useDeleteSocialLink,
-  type SocialLink,
-} from "@/hooks/useSocialLinks";
+import { useSocialLinks, useCreateSocialLink, useDeleteSocialLink } from "@/hooks/useSocialLinks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, Trash2, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -35,86 +12,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-
-const ICON_OPTIONS = [
-  { value: "github", label: "GitHub" },
-  { value: "linkedin", label: "LinkedIn" },
-  { value: "twitter", label: "Twitter / X" },
-  { value: "instagram", label: "Instagram" },
-  { value: "youtube", label: "YouTube" },
-  { value: "globe", label: "Website" },
-  { value: "mail", label: "Email" },
-  { value: "link", label: "Other" },
-];
-
-interface LinkFormData {
-  platform: string;
-  url: string;
-  icon: string;
-  display_order: number;
-}
-
-const emptyForm: LinkFormData = {
-  platform: "",
-  url: "",
-  icon: "link",
-  display_order: 0,
-};
 
 export function SocialLinksManager() {
-  const { data: links = [], isLoading } = useSocialLinks();
+  const { data: socialLinks, isLoading } = useSocialLinks();
   const createLink = useCreateSocialLink();
-  const updateLink = useUpdateSocialLink();
   const deleteLink = useDeleteSocialLink();
 
-  const [form, setForm] = useState<LinkFormData>(emptyForm);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [platform, setPlatform] = useState("");
+  const [url, setUrl] = useState("");
 
-  function openCreate() {
-    setForm(emptyForm);
-    setEditingId(null);
-    setDialogOpen(true);
-  }
-
-  function openEdit(link: SocialLink) {
-    setForm({
-      platform: link.platform,
-      url: link.url,
-      icon: link.icon,
-      display_order: link.display_order,
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await createLink.mutateAsync({
+      platform,
+      url,
+      icon: null,
+      display_order: 0,
     });
-    setEditingId(link.id);
-    setDialogOpen(true);
-  }
-
-  function handleSubmit() {
-    if (!form.platform.trim() || !form.url.trim()) {
-      toast({
-        title: "Required fields",
-        description: "Please enter a platform name and URL.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (editingId) {
-      updateLink.mutate({ id: editingId, ...form }, {
-        onSuccess: () => setDialogOpen(false),
-      });
-    } else {
-      createLink.mutate(form, {
-        onSuccess: () => setDialogOpen(false),
-      });
-    }
-  }
+    
+    setPlatform("");
+    setUrl("");
+    setShowForm(false);
+  };
 
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
   }
@@ -122,104 +47,96 @@ export function SocialLinksManager() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Social Links ({links.length})</h3>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" onClick={openCreate}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              Add Link
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>{editingId ? "Edit Link" : "New Link"}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
+        <h3 className="text-lg font-semibold">Social Links</h3>
+        <Button onClick={() => setShowForm(!showForm)} size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Link
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Add Social Link</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>Platform Name *</Label>
-                <Input
-                  value={form.platform}
-                  onChange={(e) => setForm((p) => ({ ...p, platform: e.target.value }))}
-                  placeholder="e.g. LinkedIn"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>URL *</Label>
-                <Input
-                  value={form.url}
-                  onChange={(e) => setForm((p) => ({ ...p, url: e.target.value }))}
-                  placeholder="https://..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Icon</Label>
-                <Select value={form.icon} onValueChange={(v) => setForm((p) => ({ ...p, icon: v }))}>
+                <Label htmlFor="platform">Platform *</Label>
+                <Select value={platform} onValueChange={setPlatform} required>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select platform" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ICON_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="GitHub">GitHub</SelectItem>
+                    <SelectItem value="LinkedIn">LinkedIn</SelectItem>
+                    <SelectItem value="Twitter">Twitter</SelectItem>
+                    <SelectItem value="Email">Email</SelectItem>
+                    <SelectItem value="Instagram">Instagram</SelectItem>
+                    <SelectItem value="Youtube">Youtube</SelectItem>
+                    <SelectItem value="Website">Website</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-2">
-                <Label>Display Order</Label>
+                <Label htmlFor="url">URL *</Label>
                 <Input
-                  type="number"
-                  value={form.display_order}
-                  onChange={(e) => setForm((p) => ({ ...p, display_order: parseInt(e.target.value) || 0 }))}
+                  id="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://github.com/username"
+                  required
                 />
               </div>
-              <Button
-                onClick={handleSubmit}
-                disabled={createLink.isPending || updateLink.isPending}
-                className="w-full"
-              >
-                {(createLink.isPending || updateLink.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingId ? "Save Changes" : "Add Link"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+
+              <div className="flex gap-2">
+                <Button type="submit" disabled={createLink.isPending}>
+                  {createLink.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Add Link
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-2">
-        {links.map((link) => (
-          <Card key={link.id} className="border-border/50">
-            <CardContent className="flex items-center justify-between p-4">
-              <div className="min-w-0">
-                <p className="font-medium">{link.platform}</p>
-                <p className="text-xs text-muted-foreground truncate max-w-[200px]">{link.url}</p>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" onClick={() => openEdit(link)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete "{link.platform}"?</AlertDialogTitle>
-                      <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => deleteLink.mutate(link.id)}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {socialLinks && socialLinks.length > 0 ? (
+          socialLinks.map((link) => (
+            <Card key={link.id}>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold">{link.platform}</h4>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {link.url}
+                    </a>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteLink.mutate(link.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No social links added yet
+          </p>
+        )}
       </div>
     </div>
   );

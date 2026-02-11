@@ -1,108 +1,108 @@
-import { useState, useMemo } from "react";
 import { useProjects } from "@/hooks/useProjects";
-import { ProjectsSkeleton } from "@/components/PageSkeleton";
-import { EmptyState } from "@/components/EmptyState";
-import { ProjectCard } from "@/components/ProjectCard";
-import { TechBadge } from "@/components/TechBadge";
-import { FolderKanban } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Loader2, ExternalLink, Github } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import { motion } from "framer-motion";
 
-const ITEMS_PER_PAGE = 9;
+export default function Projects() {
+  const { data: projects, isLoading } = useProjects();
 
-export default function ProjectsPage() {
-  const { data: projects = [], isLoading } = useProjects();
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const allTags = useMemo(() => {
-    const tags = new Set<string>();
-    projects.forEach((p) => p.tech_stack_tags.forEach((t) => tags.add(t)));
-    return Array.from(tags).sort();
-  }, [projects]);
-
-  const filtered = useMemo(() => {
-    if (!activeFilter) return projects;
-    return projects.filter((p) => p.tech_stack_tags.includes(activeFilter));
-  }, [projects, activeFilter]);
-
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
-  function handleFilterClick(tag: string) {
-    setActiveFilter((prev) => (prev === tag ? null : tag));
-    setCurrentPage(1);
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
-  if (isLoading) return <ProjectsSkeleton />;
+  if (!projects || projects.length === 0) {
+    return (
+      <EmptyState
+        icon={Github}
+        title="No projects yet"
+        description="Projects haven't been added. If you're the admin, head to Settings to add some."
+      />
+    );
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="space-y-8"
-    >
+    <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-1">Projects</h1>
-        <p className="text-muted-foreground">A collection of my work and side projects.</p>
+        <h1 className="text-3xl font-bold mb-2">Projects</h1>
+        <p className="text-muted-foreground">Showcase of my work and side projects.</p>
       </div>
 
-      {allTags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {allTags.map((tag) => (
-            <TechBadge
-              key={tag}
-              name={tag}
-              active={activeFilter === tag}
-              onClick={() => handleFilterClick(tag)}
-            />
-          ))}
-          {activeFilter && (
-            <Button variant="ghost" size="sm" onClick={() => { setActiveFilter(null); setCurrentPage(1); }}>
-              Clear
-            </Button>
-          )}
-        </div>
-      )}
-
-      {paginated.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {paginated.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          icon={FolderKanban}
-          title="No projects found"
-          description={activeFilter ? "No projects match this filter." : "Projects haven't been added yet."}
-        />
-      )}
-
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {projects.map((project, idx) => (
+          <motion.div
+            key={project.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: idx * 0.1 }}
           >
-            Previous
-          </Button>
-          <span className="flex items-center text-sm text-muted-foreground font-mono px-3">
-            {currentPage} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </Button>
-        </div>
-      )}
-    </motion.div>
+            <Card className="h-full flex flex-col overflow-hidden hover:shadow-lg transition-shadow">
+              {project.thumbnail_url && (
+                <div className="aspect-video w-full overflow-hidden">
+                  <img
+                    src={project.thumbnail_url}
+                    alt={project.title}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+              )}
+              <CardHeader>
+                <CardTitle className="text-xl">{project.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col justify-between">
+                <div>
+                  {project.description && (
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {project.description}
+                    </p>
+                  )}
+                  {project.tech_stack_tags && project.tech_stack_tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {project.tech_stack_tags.map((tech, idx) => (
+                        <Badge key={idx} variant="secondary">
+                          {tech}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {project.github_url && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href={project.github_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Github className="h-4 w-4 mr-2" />
+                        Code
+                      </a>
+                    </Button>
+                  )}
+                  {project.demo_url && (
+                    <Button size="sm" asChild>
+                      <a
+                        href={project.demo_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Demo
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
+    </div>
   );
 }

@@ -5,7 +5,7 @@ import { toast } from "@/hooks/use-toast";
 export interface Project {
   id: string;
   title: string;
-  description: string;
+  description: string | null;
   tech_stack_tags: string[];
   github_url: string | null;
   demo_url: string | null;
@@ -18,86 +18,44 @@ export interface Project {
 export function useProjects() {
   return useQuery({
     queryKey: ["projects"],
-    queryFn: async (): Promise<Project[]> => {
-      const { data, error } = await supabase
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
         .from("projects")
         .select("*")
-        .order("display_order", { ascending: true });
-
+        .order("display_order", { ascending: true })
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data as Project[]) ?? [];
+      return data as Project[];
     },
   });
 }
 
 export function useCreateProject() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (project: Omit<Project, "id" | "created_at" | "updated_at">) => {
-      const { data, error } = await supabase
-        .from("projects")
-        .insert(project)
-        .select()
-        .single();
-
-      if (error) throw error;
+      console.log("Sending project:", project); // DEBUG
+      const { data, error } = await (supabase as any).from("projects").insert(project).select();
+      if (error) {
+        console.error("Insert error:", error); // DEBUG
+        throw error;
+      }
+      console.log("Insert success:", data); // DEBUG
       return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast({ title: "Project created", description: "New project has been added." });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-}
-
-export function useUpdateProject() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (updates: Partial<Project> & { id: string }) => {
-      const { id, ...rest } = updates;
-      const { data, error } = await supabase
-        .from("projects")
-        .update(rest)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast({ title: "Project updated", description: "Project has been saved." });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 }
 
 export function useDeleteProject() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("projects")
-        .delete()
-        .eq("id", id);
-
+      const { error } = await (supabase as any).from("projects").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast({ title: "Project deleted", description: "Project has been removed." });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Deleted", description: "Project removed!" });
     },
   });
 }
