@@ -32,7 +32,7 @@ export function AppSidebar() {
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-mono font-bold text-sm">
-          <img src="./public/download.jpg" alt="Aditya" className="w-8 h-8 rounded-lg" />
+          A
           </div>
           <span className="font-semibold text-sm tracking-tight">Aditya</span>
         </div>
